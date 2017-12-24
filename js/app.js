@@ -246,6 +246,7 @@ $(function() {
 		var notificationOptions = {
 			icon: acolyte.image,
 			body: acolyte.location,
+			badge: "./android-chrome-192x192.png",
 			renotify: true,
 			tag: acolyte.name,
 			vibration: [100, 100, 50, 50]
