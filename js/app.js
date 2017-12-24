@@ -246,6 +246,8 @@ $(function() {
 		var notificationOptions = {
 			icon: acolyte.image,
 			body: acolyte.location,
+			renotify: true,
+			tag: acolyte.name,
 			vibration: [100, 100, 50, 50]
 		}
 		if(!discovered) {
