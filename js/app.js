@@ -48,6 +48,33 @@ $(function() {
 	if(localStorage.muted) {
 		$("#sounds").click();
 	}
+
+	// Notifications
+	var $notify = $("#notify");
+	$notify.click(function(){
+		if($notify.hasClass("cyan")) {
+			$notify.removeClass("cyan").addClass("red");
+			delete localStorage.notify;
+		} else {
+			$notify.removeClass("red").addClass("cyan");
+			localStorage.notify = true;
+		}
+		// Request permission when the user clicks the button
+		window.Notification.requestPermission(function(permission) {
+			if(permission !== "granted") {
+				$notify.removeClass("cyan").addClass("red");
+				delete localStorage.permission;
+			}
+		});
+	});
+	if(localStorage.notify) {
+		$notify.click();
+	}
+
+  // Hide notify button if not supported
+	if(!"Notification" in window || (location.protocol !== "https:" && location.hostname !== "localhost")) {
+		$notify.hide();
+	}
 	
 	//Night mode
 	$("#night").click(function() {
@@ -204,6 +231,36 @@ $(function() {
 		}		
 	}
 	
+	// Quarantined notification function
+	function showNotification(acolyte, discovered){
+		// Abort if not enabled or not supported
+		if(!localStorage.notify || !"Notification" in window) {
+			return;
+		}
+		// Abort if denied
+		if(Notification.permission !== "granted") {
+			return;
+		}
+		discovered = discovered || false;
+		var notificationTitle = acolyte.name + " Discovered";
+		var notificationOptions = {
+			icon: acolyte.image,
+			body: acolyte.location,
+			vibration: [100, 100, 50, 50]
+		}
+		if(!discovered) {
+			notificationTitle = acolyte.name += " Vanished";
+			notificationOptions.body = "";
+		}
+		// New spec support
+		if(window.serviceWorker) {
+			window.serviceWorker.showNotification(notificationTitle, notificationOptions);
+		// Old spec support (Edge)
+		} else {
+			new Notification(notificationTitle, notificationOptions);
+		}
+	}
+
 	function hiddenAcolyte(name) {
 		var output = [];
 		output.push('<div id="acolyte-' + name + '" class="card grey lighten-4 horizontal hoverable">');
@@ -228,13 +285,23 @@ $(function() {
 			var disc = aco.Discovered;
 			var health = aco.HealthPercent;
 			var mods = acolytes[acoName].mods;
+			var imagePath = "img/" + acoName + ".png";
+			var location = escapeHtml(nodes[aco.LastDiscoveredLocation].value + " [" + nodes[aco.LastDiscoveredLocation].type + "]");
 			
 			if(acolytes[acoName].disc != disc) {
 				acolytes[acoName].disc = disc;
 				
-				if($("#sounds").hasClass("green")) {
-					if(!localStorage["hide-" + name]) {
+				if(!localStorage["hide-" + name]) {
+					if($("#sounds").hasClass("green")) {
 						audio.play();
+					}
+
+					if($notify.hasClass("cyan")) {
+						showNotification({
+							name: name,
+							image: imagePath,
+							location: location
+						}, disc);
 					}
 				}
 			}
@@ -242,7 +309,7 @@ $(function() {
 			var output = [];
 			output.push('<div id="acolyte-' + name + '" class="card grey lighten-4 horizontal hoverable">');
 			output.push('	<div class="card-image">');
-			output.push('		<img src="img/' + acoName + '.png">');
+			output.push('		<img src="' + imagePath + '">');
 			output.push('	</div>');
 			output.push('	<div class="card-stacked">');
 			output.push('		<div class="card-content flow-text">');
@@ -250,7 +317,7 @@ $(function() {
 			output.push('			<div class="progress grey darken-1"> <div class="determinate red" style="width: ' + (health * 100) + '%"></div> </div>');
 			output.push("			<span class='red-text'>Health: " + (health * 100).toFixed(2) + "%</span>");
 			output.push("			<br/>");
-			output.push("			Location: " + (disc ? escapeHtml(nodes[aco.LastDiscoveredLocation].value + " [" + nodes[aco.LastDiscoveredLocation].type + "]") : "Unknown"));
+			output.push("			Location: " + (disc ? location : "Unknown"));
 			output.push("			<br/>");
 			output.push("			<a class='dropdown-button btn grey darken-3 grey-text' data-beloworigin='true' data-activates='dropdown-" + name + "'>Drops</a>");
 			output.push("			<ul id='dropdown-" + name + "' class='dropdown-content'>");
